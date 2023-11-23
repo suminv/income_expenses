@@ -276,6 +276,49 @@ class FinanceApp:
         chart_button = Button(view_window, text='Show Chart', command=self.show_chart)
         chart_button.pack(side=LEFT, padx=10, pady=10)
 
+        # Add a button for showing the spending patterns chat
+        chart_button = Button(view_window, text='Show Chart Expense', command=self.show_apple_pie)
+        chart_button.pack(side=LEFT, padx=10, pady=10)
+
+    def show_apple_pie(self):
+        # Create a new window for the chart
+        chart_window = Toplevel(self.root)
+        chart_window.title('Spending Patterns Pie Chart')
+
+        # Get data for spending patterns (replace this with your actual data)
+        self.cur.execute("""
+        SELECT description, SUM(amount) 
+        FROM transactions 
+        WHERE type = 'Expense' 
+        GROUP BY description
+        """)
+
+        data = self.cur.fetchall()
+
+        if not data:
+            messagebox.showinfo('Info', 'No data available for Expenses.')
+            chart_window.destroy()
+            return
+
+        # Extract types and amounts from the data
+        types, amounts = zip(*data)
+
+        # Create a pie chart
+        fig, ax = plt.subplots()
+        ax.pie(amounts, labels=types, autopct='%1.1f%%', startangle=90)
+
+        # Set aspect ratio to be equal, ensuring a circular pie chart
+        ax.axis('equal')
+
+        # Initialize canvas in the chart window
+        canvas = FigureCanvasTkAgg(fig, master=chart_window)
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack()
+
+        # Update the canvas
+        canvas.draw()
+
+
     def show_chart(self):
         # Create a new window for the chart
         chart_window = Toplevel(self.root)
