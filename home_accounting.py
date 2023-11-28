@@ -5,6 +5,8 @@ from datetime import datetime
 from tkinter import *
 from tkinter import filedialog
 from tkinter import ttk, messagebox
+from tkcalendar import DateEntry
+
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -18,6 +20,10 @@ class FinanceApp:
         self.setup_database()
         # Initialize sort_reverse
         self.sort_reverse = False
+        # Init treeview
+        self.treeview = None
+
+
 
         # Initialize authenticated status
         self.authenticated = False
@@ -33,6 +39,7 @@ class FinanceApp:
 
         # Set up the main GUI
         self.create_gui()
+
 
     def setup_database(self):
         self.connection = sqlite3.connect('finance.sqlite')
@@ -235,23 +242,23 @@ class FinanceApp:
         view_window.title('Show transactions')
 
         # Create a table view
-        treeview = ttk.Treeview(view_window)
-        treeview.pack()
+        self.treeview = ttk.Treeview(view_window)
+        self.treeview.pack()
 
         # Define table columns
-        treeview['columns'] = ('id', 'type', 'amount', 'description', 'datetime')
-        treeview.column('id', width=20)
-        treeview.column('type', anchor=W, width=100)
-        treeview.column('amount', anchor=W, width=100)
-        treeview.column('description', anchor=W, width=200)
-        treeview.column('datetime', anchor=W, width=200)
+        self.treeview['columns'] = ('id', 'type', 'amount', 'description', 'datetime')
+        self.treeview.column('id', width=20)
+        self.treeview.column('type', anchor=W, width=100)
+        self.treeview.column('amount', anchor=W, width=100)
+        self.treeview.column('description', anchor=W, width=200)
+        self.treeview.column('datetime', anchor=W, width=200)
 
         # Creating headers in the table
-        treeview.heading('id', text='ID', command=lambda: self.sort_treeview(treeview, 'id'))
-        treeview.heading('type', text='Type', command=lambda: self.sort_treeview(treeview, 'type'))
-        treeview.heading('amount', text='Amount', command=lambda col='amount': self.sort_amount_treeview(treeview, col))
-        treeview.heading('description', text='Description', command=lambda: self.sort_treeview(treeview, 'description'))
-        treeview.heading('datetime', text='Datetime', command=lambda: self.sort_treeview(treeview, 'datetime'))
+        self.treeview.heading('id', text='ID', command=lambda: self.sort_treeview(treeview, 'id'))
+        self.treeview.heading('type', text='Type', command=lambda: self.sort_treeview(treeview, 'type'))
+        self.treeview.heading('amount', text='Amount', command=lambda col='amount': self.sort_amount_treeview(treeview, col))
+        self.treeview.heading('description', text='Description', command=lambda: self.sort_treeview(treeview, 'description'))
+        self.treeview.heading('datetime', text='Datetime', command=lambda: self.sort_treeview(treeview, 'datetime'))
 
         # get data from the database and save it to variables
         self.cur.execute("""SELECT * FROM transactions""")
@@ -259,13 +266,13 @@ class FinanceApp:
 
         # insert data to database
         for row in rows:
-            treeview.insert('', END, values=row)
+            self.treeview.insert('', END, values=row)
 
         # Bind double-click event to the edit_transaction function
-        treeview.bind("<Double-1>", lambda event: self.edit_transaction(treeview))
+        self.treeview.bind("<Double-1>", lambda event: self.edit_transaction(self.treeview))
 
         # Add a button for deleting selected transaction
-        delete_button = Button(view_window, text='Delete', command=lambda: self.delete_transaction(treeview))
+        delete_button = Button(view_window, text='Delete', command=lambda: self.delete_transaction(self.treeview))
         delete_button.pack(side=LEFT, padx=10, pady=10)
 
         # Add a button for export transaction to csv file
@@ -279,6 +286,51 @@ class FinanceApp:
         # Add a button for showing the spending patterns chat
         chart_button = Button(view_window, text='Show Chart Expense', command=self.show_apple_pie)
         chart_button.pack(side=LEFT, padx=10, pady=10)
+        # Add date filter widgets using tkcalendar
+        start_date_label = Label(view_window, text='Start Date:')
+        start_date_label.pack(pady=10)
+        self.start_date_entry = DateEntry(view_window)
+        self.start_date_entry.pack()
+
+        end_date_label = Label(view_window, text='End Date:')
+        end_date_label.pack(pady=10)
+        self.end_date_entry = DateEntry(view_window)
+        self.end_date_entry.pack()
+
+        # Add filter button
+        filter_button = Button(view_window, text='Filter', command=self.filter_transactions)
+        filter_button.pack(pady=10)
+
+    def filter_transactions(self):
+        # Get start and end dates
+        start_date = self.start_date_entry.get_date()
+        end_date = self.end_date_entry.get_date()
+
+        # Validate date range
+        if start_date > end_date:
+            messagebox.showerror('Error', 'Start date cannot be greater than end date.')
+            return
+
+        # Clear existing items in Treeview
+        self.clear_treeview()
+
+        # Retrieve transactions within the date range from the database
+        self.cur.execute("""
+            SELECT * FROM transactions 
+            WHERE datetime BETWEEN ? AND ? || ' 23:59:59'  -- Consider the entire end date
+        """, (start_date, end_date))
+
+        rows = self.cur.fetchall()
+
+        # Insert filtered data into the Treeview
+        for row in rows:
+            self.treeview.insert('', END, values=row)
+
+    def clear_treeview(self):
+        # Clear the contents of the Treeview
+        if self.treeview:
+            for item in self.treeview.get_children():
+                self.treeview.delete(item)
 
     def show_apple_pie(self):
         # Create a new window for the chart
