@@ -254,11 +254,12 @@ class FinanceApp:
         self.treeview.column('datetime', anchor=W, width=200)
 
         # Creating headers in the table
-        self.treeview.heading('id', text='ID', command=lambda: self.sort_treeview(treeview, 'id'))
-        self.treeview.heading('type', text='Type', command=lambda: self.sort_treeview(treeview, 'type'))
-        self.treeview.heading('amount', text='Amount', command=lambda col='amount': self.sort_amount_treeview(treeview, col))
-        self.treeview.heading('description', text='Description', command=lambda: self.sort_treeview(treeview, 'description'))
-        self.treeview.heading('datetime', text='Datetime', command=lambda: self.sort_treeview(treeview, 'datetime'))
+        self.treeview.heading('id', text='ID', command=lambda: self.sort_treeview(self.treeview, 'id'))
+        self.treeview.heading('type', text='Type', command=lambda: self.sort_treeview(self.treeview, 'type'))
+        self.treeview.heading('amount', text='Amount', command=lambda col='amount': self.sort_amount_treeview(
+            self.treeview, col))
+        self.treeview.heading('description', text='Description', command=lambda: self.sort_treeview(self.treeview, 'description'))
+        self.treeview.heading('datetime', text='Datetime', command=lambda: self.sort_treeview(self.treeview, 'datetime'))
 
         # get data from the database and save it to variables
         self.cur.execute("""SELECT * FROM transactions""")
@@ -317,7 +318,7 @@ class FinanceApp:
         # Retrieve transactions within the date range from the database
         self.cur.execute("""
             SELECT * FROM transactions 
-            WHERE datetime BETWEEN ? AND ? || ' 23:59:59'  -- Consider the entire end date
+            WHERE date(datetime) BETWEEN ? AND ?
         """, (start_date, end_date))
 
         rows = self.cur.fetchall()
